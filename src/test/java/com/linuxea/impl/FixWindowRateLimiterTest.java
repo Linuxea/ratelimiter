@@ -11,11 +11,11 @@ class FixWindowRateLimiterTest {
   @Test
   void acquire() {
     ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
-    RateLimiter rateLimiter = new FixWindowRateLimiter(1300, 1, TimeUnit.SECONDS,
+    RateLimiter rateLimiter = new FixWindowRateLimiter(20, 1, TimeUnit.SECONDS,
         scheduledExecutorService);
 
     Integer success = 0;
-    for (int i = 0; i < 500; i++) {
+    for (int i = 0; i < 50; i++) {
       if (rateLimiter.tryAcquire()) {
         System.out.println("success");
         success++;

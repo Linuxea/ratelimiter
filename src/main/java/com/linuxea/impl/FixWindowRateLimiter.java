@@ -10,12 +10,12 @@ public class FixWindowRateLimiter implements RateLimiter {
   private final int maxTokens;
   private final AtomicInteger tokens;
 
-  public FixWindowRateLimiter(int maxTokens, long period, TimeUnit timeUnit,
+  public FixWindowRateLimiter(int maxTokens, long windowSize, TimeUnit timeUnit,
       ScheduledExecutorService scheduler) {
     this.maxTokens = maxTokens;
     this.tokens = new AtomicInteger(maxTokens);
-    long periodInMillis = timeUnit.toMillis(period);
-    scheduler.scheduleAtFixedRate(this::addTokens, periodInMillis, periodInMillis,
+    long windowSizeInMillis = timeUnit.toMillis(windowSize);
+    scheduler.scheduleAtFixedRate(this::addTokens, windowSizeInMillis, windowSizeInMillis,
         TimeUnit.MILLISECONDS);
   }
 

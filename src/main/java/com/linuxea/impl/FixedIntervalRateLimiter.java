@@ -13,13 +13,14 @@ public class FixedIntervalRateLimiter implements RateLimiter {
   private final int maxTokens;
   private final AtomicInteger tokens;
 
-  public FixedIntervalRateLimiter(int maxTokens, long period, TimeUnit timeUnit,
+  public FixedIntervalRateLimiter(int maxTokens, long windowSize, TimeUnit timeUnit,
       ScheduledExecutorService scheduler) {
     this.maxTokens = maxTokens;
     this.tokens = new AtomicInteger(maxTokens);
-    long periodInMillis = timeUnit.toMillis(period);
-    long intervalInMillis = periodInMillis / maxTokens;
-    scheduler.scheduleAtFixedRate(this::addToken, 0, intervalInMillis, TimeUnit.MILLISECONDS);
+    long windowSizeInMillis = timeUnit.toMillis(windowSize);
+    long intervalInMillis = windowSizeInMillis / maxTokens;
+    scheduler.scheduleAtFixedRate(this::addToken, intervalInMillis, intervalInMillis,
+        TimeUnit.MILLISECONDS);
   }
 
   private void addToken() {
