@@ -14,4 +14,11 @@ public interface RateLimiter {
    * @return true:获取成功 false:获取失败
    */
   boolean tryAcquire();
+
+  /**
+   * 获取下一个窗口开始时间
+   *
+   * @return 下一个窗口开始时间
+   */
+  Long getNextWindowStartTimestamp();
 }

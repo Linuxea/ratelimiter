@@ -17,7 +17,7 @@ class SlidingWindowRateLimiterTest {
     Jedis jedis = new Jedis(System.getenv("REDIS_HOST"));
 
     ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
-    RateLimiter rateLimiter = new SlidingWindowRateLimiter(20, jedis, TimeUnit.SECONDS, 1,
+    RateLimiter rateLimiter = new SlidingWindowRateLimiter(20, jedis, 3, TimeUnit.SECONDS,
         scheduledExecutorService);
 
     Integer success = 0;

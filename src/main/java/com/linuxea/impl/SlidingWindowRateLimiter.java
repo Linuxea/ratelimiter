@@ -1,33 +1,29 @@
 package com.linuxea.impl;
 
-import com.linuxea.RateLimiter;
 import java.time.Instant;
 import java.util.UUID;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import redis.clients.jedis.Jedis;
 
-public class SlidingWindowRateLimiter implements RateLimiter {
+public class SlidingWindowRateLimiter extends AbsRateLimiter {
 
-  private final int maxTokens;
   private final Jedis jedis;
-  private final Integer windowSize;
-  private final TimeUnit widowSizeUnit;
   private final String key;
 
-  public SlidingWindowRateLimiter(int maxTokens, Jedis jedis, TimeUnit widowSizeUnit,
-      Integer windowSize, ScheduledExecutorService scheduler) {
+  public SlidingWindowRateLimiter(int maxTokens, Jedis jedis,
+      Integer windowSize, TimeUnit windowTimeUnit, ScheduledExecutorService scheduler) {
     this.maxTokens = maxTokens;
     this.jedis = jedis;
     this.windowSize = windowSize;
-    this.widowSizeUnit = widowSizeUnit;
+    this.windowTimeUnit = windowTimeUnit;
     //identifier for the sorted set
     this.key = "sliding_window" + UUID.randomUUID();
     // Schedule a task to remove events older than the lower bound from the sorted set
-    long windowSizeInMillis = widowSizeUnit.toMillis(windowSize);
+    long windowSizeInMillis = windowTimeUnit.toMillis(windowSize);
+    this.delayTimeStamp = windowSizeInMillis;
     scheduler.scheduleAtFixedRate(this::removeOlderEventOutOfWindows, windowSizeInMillis,
-        windowSizeInMillis,
-        TimeUnit.MILLISECONDS);
+        windowSizeInMillis, TimeUnit.MILLISECONDS);
   }
 
   @Override
@@ -38,7 +34,7 @@ public class SlidingWindowRateLimiter implements RateLimiter {
     jedis.zadd(key, tsSeconds, UUID.randomUUID().toString());
 
     // Calculate the lower and upper bounds for the sliding window
-    long lowerBound = tsSeconds - widowSizeUnit.toSeconds(windowSize);
+    long lowerBound = tsSeconds - windowTimeUnit.toSeconds(windowSize);
 
     // Count the events in the sliding window
     long eventCount = jedis.zcount(key, String.valueOf(lowerBound + 1), String.valueOf(tsSeconds));
@@ -48,7 +44,7 @@ public class SlidingWindowRateLimiter implements RateLimiter {
 
   private void removeOlderEventOutOfWindows() {
     long tsSeconds = Instant.now().getEpochSecond();
-    long lowerBound = tsSeconds - widowSizeUnit.toSeconds(windowSize);
+    long lowerBound = tsSeconds - windowTimeUnit.toSeconds(windowSize);
     // Remove events older than the lower bound from the sorted set
     jedis.zremrangeByScore(key, "-inf", String.valueOf(lowerBound));
   }

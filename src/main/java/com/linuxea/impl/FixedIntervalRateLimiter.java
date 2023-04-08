@@ -1,6 +1,5 @@
 package com.linuxea.impl;
 
-import com.linuxea.RateLimiter;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -8,17 +7,17 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * 固定时间间隔限流器
  */
-public class FixedIntervalRateLimiter implements RateLimiter {
+public class FixedIntervalRateLimiter extends AbsRateLimiter {
 
-  private final int maxTokens;
-  private final AtomicInteger tokens;
-
-  public FixedIntervalRateLimiter(int maxTokens, long windowSize, TimeUnit timeUnit,
+  public FixedIntervalRateLimiter(int maxTokens, long windowSize, TimeUnit windowTimeUnit,
       ScheduledExecutorService scheduler) {
     this.maxTokens = maxTokens;
-    this.tokens = new AtomicInteger(maxTokens);
-    long windowSizeInMillis = timeUnit.toMillis(windowSize);
+    this.tokens = new AtomicInteger(0);
+    this.windowSize = windowSize;
+    this.windowTimeUnit = windowTimeUnit;
+    long windowSizeInMillis = windowTimeUnit.toMillis(windowSize);
     long intervalInMillis = windowSizeInMillis / maxTokens;
+    this.delayTimeStamp = intervalInMillis;
     scheduler.scheduleAtFixedRate(this::addToken, intervalInMillis, intervalInMillis,
         TimeUnit.MILLISECONDS);
   }

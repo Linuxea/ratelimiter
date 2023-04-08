@@ -1,35 +1,37 @@
 package com.linuxea.impl;
 
-import com.linuxea.RateLimiter;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class FixWindowRateLimiter implements RateLimiter {
+public class FixWindowRateLimiter extends AbsRateLimiter {
 
-  private final int maxTokens;
-  private final AtomicInteger tokens;
-
-  public FixWindowRateLimiter(int maxTokens, long windowSize, Long windowStart, TimeUnit timeUnit,
-      ScheduledExecutorService scheduler) {
+  public FixWindowRateLimiter(int maxTokens, long windowSize, Long windowStart,
+      TimeUnit windowTimeUnit, ScheduledExecutorService scheduler) {
     this.maxTokens = maxTokens;
-    this.tokens = new AtomicInteger(0);
-    long windowSizeInMillis = timeUnit.toMillis(windowSize);
-    long delay = calculateDelay(windowStart, windowSizeInMillis);
-    scheduler.scheduleAtFixedRate(this::addTokens, delay, windowSizeInMillis,
+    this.tokens = new AtomicInteger(System.currentTimeMillis() > windowStart ? maxTokens : 0);
+    this.windowSize = windowSize;
+    this.windowTimeUnit = windowTimeUnit;
+    long windowSizeInMillis = windowTimeUnit.toMillis(windowSize);
+    this.delayTimeStamp = calculateDelay(windowStart, windowSizeInMillis);
+    scheduler.scheduleAtFixedRate(this::addTokens, delayTimeStamp, windowSizeInMillis,
         TimeUnit.MILLISECONDS);
   }
 
-  public FixWindowRateLimiter(int maxTokens, long windowSize, TimeUnit timeUnit,
+  public FixWindowRateLimiter(int maxTokens, long windowSize, TimeUnit windowTimeUnit,
       ScheduledExecutorService scheduler) {
-    this(maxTokens, windowSize, null, timeUnit, scheduler);
+    this.maxTokens = maxTokens;
+    this.tokens = new AtomicInteger(0);
+    this.windowSize = windowSize;
+    this.windowTimeUnit = windowTimeUnit;
+    long windowSizeInMillis = windowTimeUnit.toMillis(windowSize);
+    scheduler.scheduleAtFixedRate(this::addTokens, 0, windowSizeInMillis, TimeUnit.MILLISECONDS);
   }
 
   /**
    * 计算延迟时间
    *
-   * @param windowStartMillis  从什么时候开始计算
-   * @param windowSizeInMillis 窗口时间大小
+   * @param windowStartMillis 从什么时候开始计算
    * @return 延迟时间
    */
   private long calculateDelay(Long windowStartMillis, long windowSizeInMillis) {
@@ -46,6 +48,7 @@ public class FixWindowRateLimiter implements RateLimiter {
     }
   }
 
+
   private void addTokens() {
     tokens.set(Math.min(tokens.get() + maxTokens, maxTokens));
   }
@@ -60,5 +63,6 @@ public class FixWindowRateLimiter implements RateLimiter {
       return false;
     }
   }
+
 }
 
