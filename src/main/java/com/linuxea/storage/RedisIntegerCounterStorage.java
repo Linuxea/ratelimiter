@@ -1,85 +1,105 @@
 package com.linuxea.storage;
 
 import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
 
 public class RedisIntegerCounterStorage implements CounterStorage {
 
   private final String keyName;
-  private final Jedis jedis;
+  private final JedisPool jedisPool;
   private final String lockKey;
 
-  public RedisIntegerCounterStorage(String keyName, Jedis jedis) {
+  public RedisIntegerCounterStorage(String keyName, JedisPool jedisPool) {
     this.keyName = keyName + ":counter";
-    this.jedis = jedis;
+    this.jedisPool = jedisPool;
     lockKey = keyName + ":lock";
   }
 
   @Override
   public void init(int initValue) {
-    this.jedis.set(keyName, String.valueOf(initValue));
+    Jedis resource = this.jedisPool.getResource();
+    resource.set(keyName, String.valueOf(initValue));
+    jedisPool.returnResource(resource);
   }
 
   @Override
   public void set(int value) {
-    this.jedis.set(keyName, String.valueOf(value));
+    Jedis resource = this.jedisPool.getResource();
+    resource.set(keyName, String.valueOf(value));
+    jedisPool.returnResource(resource);
   }
 
   @Override
   public int getAndDecrement() {
-    while (!(this.jedis.setnx(lockKey, "1") > 1)) {
-      // do nothing
+    Jedis resource = this.jedisPool.getResource();
+    while (true) {
+      if (!(resource.setnx(lockKey, "1") > 1)) {
+        break;
+      }
     }
     int counterInt = this.get();
     if (counterInt > 0) {
-      this.jedis.set(keyName, String.valueOf(counterInt - 1));
+      resource.set(keyName, String.valueOf(counterInt - 1));
     }
+    resource.del(lockKey);
+    jedisPool.returnResource(resource);
     return counterInt;
   }
 
   @Override
   public int incrementAndGet() {
-    while (!(this.jedis.setnx(lockKey, "1") > 1)) {
-      // do nothing
+    Jedis resource = this.jedisPool.getResource();
+    while (true) {
+      if (!(resource.setnx(lockKey, "1") > 1)) {
+        break;
+      }
     }
 
     final int[] counterInt = new int[1];
-    new DelKeyCallback(this.jedis, lockKey) {
+    new DelKeyCallback(resource, lockKey) {
       @Override
       void doCore() {
         counterInt[0] = get();
-        jedis.set(keyName, String.valueOf(counterInt[0] + 1));
+        resource.set(keyName, String.valueOf(counterInt[0] + 1));
       }
     }.doCall();
+    jedisPool.returnResource(resource);
     return counterInt[0];
   }
 
   @Override
   public int get() {
-    String counter = this.jedis.get(keyName);
+    Jedis resource = this.jedisPool.getResource();
+    String counter = resource.get(keyName);
     if (counter == null) {
       return 0;
     }
+    jedisPool.returnResource(resource);
     return Integer.parseInt(counter);
   }
 
   @Override
   public boolean compareAndSet(int expect, int update) {
-    while (!(this.jedis.setnx(lockKey, "1") > 1)) {
-      // do nothing
+    Jedis resource = this.jedisPool.getResource();
+    while (true) {
+      if (!(resource.setnx(lockKey, "1") > 1)) {
+        break;
+      }
     }
 
     final Boolean[] result = new Boolean[1];
-    new DelKeyCallback(this.jedis, lockKey) {
+    new DelKeyCallback(resource, lockKey) {
       @Override
       void doCore() {
         int oldValue = get();
         if (oldValue == expect) {
-          jedis.set(keyName, String.valueOf(update));
+          resource.set(keyName, String.valueOf(update));
           result[0] = true;
         }
         result[0] = false;
       }
     }.doCall();
+    jedisPool.returnResource(resource);
     return result[0];
   }
 

@@ -9,20 +9,21 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
-import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.JedisPoolConfig;
 
 /**
  * 在一个在线购物网站中，为了防止刷单行为，限制每个用户在30分钟内只能下单数量为1件
  */
-public class ShoppingSlidingWindowRateLimiter {
+public class ShoppingSlidingWindowRateLimiterTest {
 
   @Test
   public void test() throws InterruptedException {
     ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
     int maxShoppTimes = 100;
     int windowSize = 30;
-    Jedis jedis = new Jedis(System.getenv("REDIS_HOST"));
-    RateLimiter rateLimiter = new SlidingWindowRateLimiter(maxShoppTimes, jedis, windowSize,
+    JedisPool jedisPool = new JedisPool(new JedisPoolConfig(), System.getenv("REDIS_HOST"), 6379);
+    RateLimiter rateLimiter = new SlidingWindowRateLimiter(maxShoppTimes, jedisPool, windowSize,
         TimeUnit.MINUTES, scheduledExecutorService);
 
     Long nextWindowStartTimestamp = rateLimiter.getNextWindowStartTimestamp();

@@ -5,19 +5,19 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
-import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.JedisPoolConfig;
 
-class SlidingWindowRateLimiterTest {
+public class SlidingWindowRateLimiterTest {
 
 
   @Test
-  @SuppressWarnings("deprecation")
   public void testRateLimiter() {
 
-    Jedis jedis = new Jedis(System.getenv("REDIS_HOST"));
+    JedisPool jedisPool = new JedisPool(new JedisPoolConfig(), "REDIS_HOST", 6379);
 
     ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
-    RateLimiter rateLimiter = new SlidingWindowRateLimiter(20, jedis, 3, TimeUnit.SECONDS,
+    RateLimiter rateLimiter = new SlidingWindowRateLimiter(20, jedisPool, 3, TimeUnit.SECONDS,
         scheduledExecutorService);
 
     Integer success = 0;
@@ -32,7 +32,6 @@ class SlidingWindowRateLimiterTest {
 
     System.out.println("成功次数" + success);
     scheduledExecutorService.shutdown();
-    jedis.close();
   }
 
 }

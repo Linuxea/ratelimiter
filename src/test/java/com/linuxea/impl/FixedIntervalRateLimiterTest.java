@@ -6,7 +6,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 
-class FixedIntervalRateLimiterTest {
+public class FixedIntervalRateLimiterTest {
 
 
   @Test

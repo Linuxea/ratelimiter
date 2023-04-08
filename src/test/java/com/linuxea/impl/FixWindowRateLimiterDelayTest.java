@@ -3,15 +3,16 @@ package com.linuxea.impl;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.linuxea.RateLimiter;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 
-class FixWindowRateLimiterDelayTest {
+public class FixWindowRateLimiterDelayTest {
 
   @Test
-  void testWindowStartAfterCurrentTime() throws InterruptedException {
+  public void testWindowStartAfterCurrentTime() throws InterruptedException {
     // 获取当前时间戳，再加上 2 秒作为窗口开始时间
     long windowStartMillis = System.currentTimeMillis() + 2000;
     ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
@@ -27,16 +28,23 @@ class FixWindowRateLimiterDelayTest {
   }
 
   @Test
-  void testWindowStartBeforeCurrentTime() throws InterruptedException {
+  public void testWindowStartBeforeCurrentTime() throws InterruptedException {
     // 获取当前时间戳，再减去 2 秒作为窗口开始时间
     long windowStartMillis = System.currentTimeMillis() - 2000;
     ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
-    FixWindowRateLimiter rateLimiter = new FixWindowRateLimiter(10, 5, windowStartMillis,
+    RateLimiter rateLimiter = new FixWindowRateLimiter(10, 5, windowStartMillis,
         TimeUnit.SECONDS, scheduler);
+
+    TimeUnit.MILLISECONDS.sleep(300);
+    // 获取所有的令牌
+    for (int i = 0; i < 10; i++) {
+      assertTrue(rateLimiter.tryAcquire());
+    }
     assertFalse(rateLimiter.tryAcquire());
 
-    TimeUnit.MILLISECONDS.sleep(3500);
+    //新一轮令牌开始
+    TimeUnit.MILLISECONDS.sleep(5000);
     // 获取所有剩余的令牌
     for (int i = 0; i < 10; i++) {
       assertTrue(rateLimiter.tryAcquire());

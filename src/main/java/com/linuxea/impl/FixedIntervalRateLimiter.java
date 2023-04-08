@@ -1,18 +1,25 @@
 package com.linuxea.impl;
 
+import com.linuxea.storage.AtomicIntegerCounterStorage;
+import com.linuxea.storage.CounterStorage;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * 固定时间间隔限流器
  */
-public class FixedIntervalRateLimiter extends AbsRateLimiter {
+public class FixedIntervalRateLimiter extends AbsCounterRateLimiter {
 
   public FixedIntervalRateLimiter(int maxTokens, long windowSize, TimeUnit windowTimeUnit,
       ScheduledExecutorService scheduler) {
+    this(maxTokens, windowSize, windowTimeUnit, scheduler, new AtomicIntegerCounterStorage());
+  }
+
+  public FixedIntervalRateLimiter(int maxTokens, long windowSize, TimeUnit windowTimeUnit,
+      ScheduledExecutorService scheduler, CounterStorage tokens) {
     this.maxTokens = maxTokens;
-    this.tokens = new AtomicInteger(0);
+    tokens.init(0);
+    this.tokens = tokens;
     this.windowSize = windowSize;
     this.windowTimeUnit = windowTimeUnit;
     long windowSizeInMillis = windowTimeUnit.toMillis(windowSize);
@@ -21,6 +28,7 @@ public class FixedIntervalRateLimiter extends AbsRateLimiter {
     scheduler.scheduleAtFixedRate(this::addToken, intervalInMillis, intervalInMillis,
         TimeUnit.MILLISECONDS);
   }
+
 
   private void addToken() {
     int currentTokens;
@@ -38,11 +46,11 @@ public class FixedIntervalRateLimiter extends AbsRateLimiter {
     int currentTokens = tokens.getAndDecrement();
     if (currentTokens > 0) {
       return true;
-    } else {
+    } else if (currentTokens < 0) {
       // 如果 tokens 变为负数，将其值恢复为0
       tokens.incrementAndGet();
-      return false;
     }
+    return false;
   }
 
 }

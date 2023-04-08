@@ -1,15 +1,17 @@
 package com.linuxea.impl;
 
+import com.linuxea.storage.AtomicIntegerCounterStorage;
+import com.linuxea.storage.CounterStorage;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
-public class FixWindowRateLimiter extends AbsRateLimiter {
+public class FixWindowRateLimiter extends AbsCounterRateLimiter {
 
   public FixWindowRateLimiter(int maxTokens, long windowSize, Long windowStart,
-      TimeUnit windowTimeUnit, ScheduledExecutorService scheduler) {
+      TimeUnit windowTimeUnit, ScheduledExecutorService scheduler, CounterStorage tokens) {
     this.maxTokens = maxTokens;
-    this.tokens = new AtomicInteger(System.currentTimeMillis() > windowStart ? maxTokens : 0);
+    tokens.init(windowStart != null && System.currentTimeMillis() > windowStart ? maxTokens : 0);
+    this.tokens = tokens;
     this.windowSize = windowSize;
     this.windowTimeUnit = windowTimeUnit;
     long windowSizeInMillis = windowTimeUnit.toMillis(windowSize);
@@ -18,14 +20,26 @@ public class FixWindowRateLimiter extends AbsRateLimiter {
         TimeUnit.MILLISECONDS);
   }
 
+  public FixWindowRateLimiter(int maxTokens, long windowSize, Long windowStart,
+      TimeUnit windowTimeUnit, ScheduledExecutorService scheduler) {
+    this(maxTokens, windowSize, windowStart, windowTimeUnit, scheduler,
+        new AtomicIntegerCounterStorage());
+  }
+
   public FixWindowRateLimiter(int maxTokens, long windowSize, TimeUnit windowTimeUnit,
-      ScheduledExecutorService scheduler) {
+      ScheduledExecutorService scheduler, CounterStorage tokens) {
     this.maxTokens = maxTokens;
-    this.tokens = new AtomicInteger(0);
+    tokens.init(0);
+    this.tokens = tokens;
     this.windowSize = windowSize;
     this.windowTimeUnit = windowTimeUnit;
     long windowSizeInMillis = windowTimeUnit.toMillis(windowSize);
     scheduler.scheduleAtFixedRate(this::addTokens, 0, windowSizeInMillis, TimeUnit.MILLISECONDS);
+  }
+
+  public FixWindowRateLimiter(int maxTokens, long windowSize, TimeUnit windowTimeUnit,
+      ScheduledExecutorService scheduler) {
+    this(maxTokens, windowSize, null, windowTimeUnit, scheduler, new AtomicIntegerCounterStorage());
   }
 
   /**
@@ -50,18 +64,18 @@ public class FixWindowRateLimiter extends AbsRateLimiter {
 
 
   private void addTokens() {
-    tokens.set(Math.min(tokens.get() + maxTokens, maxTokens));
+    tokens.set(maxTokens);
   }
 
   public boolean tryAcquire() {
     int currentTokens = tokens.getAndDecrement();
     if (currentTokens > 0) {
       return true;
-    } else {
+    } else if (currentTokens < 0) {
       // 如果 tokens 变为负数，将其值恢复为0
       tokens.incrementAndGet();
-      return false;
     }
+    return false;
   }
 
 }

@@ -13,12 +13,12 @@ import org.junit.jupiter.api.Test;
 /**
  * 在一个在线购物网站中，为了防止刷单行为，限制每个用户在30分钟内只能下单数量为1件
  */
-public class ShoppingRateLimiter {
+public class ShoppingRateLimiterTest {
 
   @Test
   public void test() throws InterruptedException {
     ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
-    int maxShoppTimes = 100;
+    int maxShoppTimes = 10;
     int windowSize = 30;
     RateLimiter rateLimiter = new FixWindowRateLimiter(maxShoppTimes, windowSize,
         TimeUnit.MINUTES,

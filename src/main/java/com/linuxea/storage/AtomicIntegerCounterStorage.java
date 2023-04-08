@@ -26,7 +26,8 @@ public class AtomicIntegerCounterStorage implements CounterStorage {
 
   @Override
   public int get() {
-    return counter.get();
+    int get = counter.get();
+    return get;
   }
 
   @Override

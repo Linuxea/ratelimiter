@@ -8,7 +8,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 
-public class ApiRateLimiter {
+public class ApiRateLimiterTest {
 
   @Test
   public void test() throws InterruptedException {
